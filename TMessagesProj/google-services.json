@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "304597917562",
+    "project_id": "nullgram-7e562",
+    "storage_bucket": "nullgram-7e562.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:304597917562:android:a5b07ab5db8d2237ef00c3",
+        "android_client_info": {
+          "package_name": "top.qwq2333.nullgram"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAk4kVXbJWNKAqmUc7ThJkGyzUGWqyAs7I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
