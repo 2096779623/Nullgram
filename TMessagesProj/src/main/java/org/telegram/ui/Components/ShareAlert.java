@@ -509,7 +509,7 @@ public class ShareAlert extends BottomSheet implements NotificationCenter.Notifi
         this(context, fragment, messages, text, text2, channel, copyLink, copyLink2, fullScreen, forCall, includeStory, false, resourcesProvider);
     }
 
-    public ShareAlert(final Context context, ChatActivity fragment, ArrayList<MessageObject> messages, final String text, final String text2, boolean channel, final String copyLink, final String copyLink2, boolean fullScreen, boolean forCall, boolean includeStory, boolean noQuote, Theme.ResourcesProvider resourcesProvider) {
+    public ShareAlert(final Context context, ChatActivity fragment, ArrayList<MessageObject> messages, final String text, final String text2, boolean channel, final String copyLink, final String copyLink2, boolean fullScreen, boolean forCall, boolean noQuote, boolean includeStory, Theme.ResourcesProvider resourcesProvider) {
         this(context, fragment, messages, text, text2, channel, copyLink, copyLink2, fullScreen, forCall, includeStory, noQuote, null, resourcesProvider);
     }
 
@@ -520,6 +520,7 @@ public class ShareAlert extends BottomSheet implements NotificationCenter.Notifi
     public ShareAlert(final Context context, ChatActivity fragment, ArrayList<MessageObject> messages, final String text, final String text2, boolean channel, final String copyLink, final String copyLink2, boolean fullScreen, boolean forCall, boolean includeStory, boolean noQuote, Integer video_timestamp, Theme.ResourcesProvider theme) {
         super(context, true, theme);
         this.resourcesProvider = theme;
+        this.includeStory = includeStory;
         this.forwardContext = () -> sendingMessageObjects;
         this.forwardContext.getForwardParams().noQuote = noQuote;
 
