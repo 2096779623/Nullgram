@@ -61,7 +61,7 @@ jobs:
           sudo rm -rf /usr/local/share/chromium
           sudo rm -rf /usr/local/lib/node_modules
           df -h
-          sudo apt-get install bison gcc make curl ninja-build -y
+          sudo apt-get install bison gcc make curl ninja-build libavutil-dev  ffmpeg dav1d -y
           echo "y" | sdkmanager --install "ndk;27.0.12077973" --sdk_root=${ANDROID_SDK_ROOT} &> /dev/null
           sdkmanager --install "cmake;3.22.1" --sdk_root=${ANDROID_SDK_ROOT} &> /dev/null
           echo "sdk.dir=${ANDROID_HOME}" >> local.properties
