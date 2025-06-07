@@ -252,6 +252,50 @@ AVCodecContext *createContext(JNIEnv *env, const AVCodec *codec, jbyteArray extr
   return context;
 }
 
+int get_swr_context(AVCodecContext *context, SwrContext **out) {
+  AVSampleFormat sampleFormat = context->sample_fmt;
+//    int channelCount = context->channels;
+    int channelLayout = context->ch_layout.u.mask;
+    int sampleRate = context->sample_rate;
+
+    SwrContext *resampleContext = nullptr;
+    if (context->opaque) {
+        resampleContext = (SwrContext *) context->opaque;
+        int64_t value;
+        if (
+            (av_opt_get_int(resampleContext, "in_channel_layout", 0, &value) < 0 || value != channelLayout) ||
+            (av_opt_get_int(resampleContext, "out_channel_layout", 0, &value) < 0 || value != channelLayout) ||
+            (av_opt_get_int(resampleContext, "in_sample_rate", 0, &value) < 0 || value != sampleRate) ||
+            (av_opt_get_int(resampleContext, "out_sample_rate", 0, &value) < 0 || value != sampleRate) ||
+            (av_opt_get_int(resampleContext, "in_sample_fmt", 0, &value) < 0 || value != sampleFormat) ||
+            (av_opt_get_int(resampleContext, "out_sample_fmt", 0, &value) < 0 || value != context->request_sample_fmt)
+        ) {
+            swr_free(&resampleContext);
+            context->opaque = NULL;
+            resampleContext = NULL;
+        }
+    }
+
+    if (resampleContext == NULL) {
+        resampleContext = swr_alloc();
+        av_opt_set_int(resampleContext, "in_channel_layout", channelLayout, 0);
+        av_opt_set_int(resampleContext, "out_channel_layout", channelLayout, 0);
+        av_opt_set_int(resampleContext, "in_sample_rate", sampleRate, 0);
+        av_opt_set_int(resampleContext, "out_sample_rate", sampleRate, 0);
+        av_opt_set_int(resampleContext, "in_sample_fmt", sampleFormat, 0);
+        // The output format is always the requested format.
+        av_opt_set_int(resampleContext, "out_sample_fmt", context->request_sample_fmt, 0);
+        int result = swr_init(resampleContext);
+        if (result < 0) {
+            return result;
+        }
+        context->opaque = resampleContext;
+    }
+
+    *out = resampleContext;
+    return 0;
+}
+
 int decodePacket(AVCodecContext *context, AVPacket *packet,
                  uint8_t *outputBuffer, int outputSize) {
   int result = 0;
@@ -283,24 +327,36 @@ int decodePacket(AVCodecContext *context, AVPacket *packet,
     // Resample output.
     AVSampleFormat sampleFormat = context->sample_fmt;
     int channelCount = context->ch_layout.nb_channels;
-    int channelLayout = context->ch_layout.u.mask;
     int sampleRate = context->sample_rate;
     int sampleCount = frame->nb_samples;
-    int dataSize = av_samples_get_buffer_size(NULL, channelCount, sampleCount,
-                                              sampleFormat, 1);
-    SwrContext *resampleContext;
+      SwrContext *resampleContext = nullptr;
     if (context->opaque) {
       resampleContext = (SwrContext *)context->opaque;
     } else {
-      resampleContext = swr_alloc();
-      av_opt_set_int(resampleContext, "in_channel_layout", channelLayout, 0);
-      av_opt_set_int(resampleContext, "out_channel_layout", channelLayout, 0);
-      av_opt_set_int(resampleContext, "in_sample_rate", sampleRate, 0);
-      av_opt_set_int(resampleContext, "out_sample_rate", sampleRate, 0);
-      av_opt_set_int(resampleContext, "in_sample_fmt", sampleFormat, 0);
-      // The output format is always the requested format.
-      av_opt_set_int(resampleContext, "out_sample_fmt",
-                     context->request_sample_fmt, 0);
+      AVChannelLayout input_layout, output_layout;
+      av_channel_layout_default(&input_layout, channelCount);
+      av_channel_layout_default(&output_layout, channelCount);
+
+      int ret = swr_alloc_set_opts2(&resampleContext,
+                                    &output_layout, context->request_sample_fmt, sampleRate,
+                                    &input_layout, sampleFormat, sampleRate,
+                                    0, nullptr);
+
+      if (ret < 0 || !resampleContext) {
+          logError("swr_alloc_set_opts2", ret);
+          av_frame_free(&frame);
+          return AUDIO_DECODER_ERROR_INVALID_DATA;
+      }
+
+      ret = swr_init(resampleContext);
+      if (ret < 0) {
+          logError("swr_init", ret);
+          swr_free(&resampleContext);
+          av_frame_free(&frame);
+          return AUDIO_DECODER_ERROR_INVALID_DATA;
+      }
+
+
       result = swr_init(resampleContext);
       if (result < 0) {
         logError("swr_init", result);
