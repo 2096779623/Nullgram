@@ -26,6 +26,7 @@ import static org.telegram.messenger.LocaleController.formatString;
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.Manifest;
+import android.accounts.Account;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
@@ -141,6 +142,7 @@ import androidx.viewpager.widget.ViewPager;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.zxing.common.detector.MathUtils;
 
+import org.checkerframework.checker.units.qual.A;
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
@@ -27492,7 +27494,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 bottomOverlayChat.setVisibility(View.VISIBLE);
                 chatActivityEnterView.setVisibility(View.INVISIBLE);
             } else if (chatMode == MODE_PINNED ||
+<<<<<<< HEAD
                     currentChat != null && (((ChatObject.isNotInChat(currentChat) || !ChatObject.canWriteToChat(currentChat)) && !canSendMsgInCommentGroupWithoutJoin()) && (currentChat.join_to_send || !isThreadChat() || ChatObject.isForum(currentChat)) || forumTopic != null && forumTopic.closed && !ChatObject.canManageTopic(currentAccount, currentChat, forumTopic) || shouldDisplaySwipeToLeftToReplyInForum()) ||
+=======
+                    currentChat != null && (!ChatObject.isMonoForum(currentChat) || !isSubscriberSuggestions) && (((ChatObject.isNotInChat(currentChat) || !ChatObject.canWriteToChat(currentChat)) && !canSendMsgInCommentGroupWithoutJoin()) && (currentChat.join_to_send || !isThreadChat() || ChatObject.isForum(currentChat)) || forumTopic != null && forumTopic.closed && !ChatObject.canManageTopic(currentAccount, currentChat, forumTopic) || shouldDisplaySwipeToLeftToReplyInForum()) ||
+>>>>>>> d66233ec46d26f14d7798f0fbd4c08cd35f3ebd9
                     currentUser != null && (UserObject.isDeleted(currentUser) || userBlocked || UserObject.isReplyUser(currentUser))) {
                 if (chatActivityEnterView.isEditingMessage()) {
                     chatActivityEnterView.setVisibility(View.VISIBLE);
@@ -42947,7 +42953,15 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 if (messageObject.isAnyKindOfSticker() && !messageObject.isAnimatedEmojiStickers() && !messageObject.isAnimatedEmoji() && !messageObject.isDice()) {
                     Object parent = getMediaDataController().getStickerSetById(MediaDataController.getStickerSetId(selectedObject.getDocument()));
                     getSendMessagesHelper().sendSticker(
+<<<<<<< HEAD
                         selectedObject.getDocument(), null, dialog_id, replyToMsgObject, replyToMsgObject, null, replyingQuote, null, true, 0, false, parent, quickReplyShortcut, getQuickReplyId(), 0);
+=======
+                        selectedObject.getDocument(), null, dialog_id, replyToMsgObject, replyToMsgObject, null, replyingQuote, null, true, 0, false, parent, quickReplyShortcut, getQuickReplyId(), 0, getSendMonoForumPeerId());
+                    return true;
+                } else {
+                    var message = messageObject.messageOwner.message;
+                    if (!TextUtils.isEmpty(message)) {
+>>>>>>> d66233ec46d26f14d7798f0fbd4c08cd35f3ebd9
                         ArrayList<TLRPC.MessageEntity> entities;
                         if (messageObject.messageOwner.entities != null && !messageObject.messageOwner.entities.isEmpty()) {
                             entities = new ArrayList<>();

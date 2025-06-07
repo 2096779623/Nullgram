@@ -61,6 +61,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.telephony.PhoneNumberUtils;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
 import android.telephony.SignalStrength;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
@@ -108,9 +110,11 @@ import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 
 import org.telegram.PhoneFormat.PhoneFormat;
+import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.AuthTokensHelper;
+import org.telegram.messenger.BillingController;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.CallReceiver;
 import org.telegram.messenger.ContactsController;
@@ -251,14 +255,20 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             VIEW_CODE_EMAIL_SETUP = 13,
             VIEW_CODE_EMAIL = 14,
             VIEW_CODE_FRAGMENT_SMS = 15,
+<<<<<<< HEAD
 
+=======
+>>>>>>> d66233ec46d26f14d7798f0fbd4c08cd35f3ebd9
             VIEW_CODE_WORD = 16,
             VIEW_CODE_PHRASE = 17,
             VIEW_PAY = 18,
 
             VIEW_QR_LOGIN = 19,
             VIEW_BOT_LOGIN = 20;
+<<<<<<< HEAD
 
+=======
+>>>>>>> d66233ec46d26f14d7798f0fbd4c08cd35f3ebd9
 
     public final static int COUNTRY_STATE_NOT_SET_OR_VALID = 0,
             COUNTRY_STATE_EMPTY = 1,

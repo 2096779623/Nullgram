@@ -1532,8 +1532,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private Paint drillHolePaint;
     private Path drillHolePath;
 
-    private final Path mediaSpoilerPath = new Path();
-    private final float[] mediaSpoilerRadii = new float[8];
+    private Path mediaSpoilerPath = new Path();
+    private float[] mediaSpoilerRadii = new float[8];
     @Nullable
     private SpoilerEffect mediaSpoilerEffect;
     private float mediaSpoilerRevealProgress;
@@ -1556,8 +1556,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private String currentUnlockString;
     @Nullable
     private SpoilerEffect unlockSpoilerEffect;
+<<<<<<< HEAD
     private final Path unlockSpoilerPath = new Path();
     private final float[] unlockSpoilerRadii = new float[8];
+=======
+    private Path unlockSpoilerPath = new Path();
+    private float[] unlockSpoilerRadii = new float[8];
+>>>>>>> d66233ec46d26f14d7798f0fbd4c08cd35f3ebd9
 
     private StaticLayout viewsLayout;
     private int viewsTextWidth;
@@ -18826,6 +18831,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             drawSideButton != 0 ||
             drawNameLayout && nameLayout != null && currentNameEmojiStatusDrawable != null && !currentNameEmojiStatusDrawable.isEmpty() ||
             animatedEmojiStack != null && !animatedEmojiStack.holders.isEmpty() ||
+            currentNameStatusDrawable != null && !currentNameStatusDrawable.isEmpty() ||
             currentNameStatusDrawable != null && !currentNameStatusDrawable.isEmpty() ||
             currentMessagesGroup == null &&
                 (transitionParams.animateReplaceCaptionLayout && transitionParams.animateChangeProgress != 1f || transitionParams.animateChangeProgress != 1.0f && transitionParams.animateMessageText) &&
