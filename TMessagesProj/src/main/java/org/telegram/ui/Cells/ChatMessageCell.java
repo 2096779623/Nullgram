@@ -1556,13 +1556,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private String currentUnlockString;
     @Nullable
     private SpoilerEffect unlockSpoilerEffect;
-<<<<<<< HEAD
-    private final Path unlockSpoilerPath = new Path();
-    private final float[] unlockSpoilerRadii = new float[8];
-=======
+
     private Path unlockSpoilerPath = new Path();
     private float[] unlockSpoilerRadii = new float[8];
->>>>>>> d66233ec46d26f14d7798f0fbd4c08cd35f3ebd9
+
 
     private StaticLayout viewsLayout;
     private int viewsTextWidth;

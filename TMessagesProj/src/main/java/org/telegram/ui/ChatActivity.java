@@ -27494,11 +27494,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 bottomOverlayChat.setVisibility(View.VISIBLE);
                 chatActivityEnterView.setVisibility(View.INVISIBLE);
             } else if (chatMode == MODE_PINNED ||
-<<<<<<< HEAD
-                    currentChat != null && (((ChatObject.isNotInChat(currentChat) || !ChatObject.canWriteToChat(currentChat)) && !canSendMsgInCommentGroupWithoutJoin()) && (currentChat.join_to_send || !isThreadChat() || ChatObject.isForum(currentChat)) || forumTopic != null && forumTopic.closed && !ChatObject.canManageTopic(currentAccount, currentChat, forumTopic) || shouldDisplaySwipeToLeftToReplyInForum()) ||
-=======
+
                     currentChat != null && (!ChatObject.isMonoForum(currentChat) || !isSubscriberSuggestions) && (((ChatObject.isNotInChat(currentChat) || !ChatObject.canWriteToChat(currentChat)) && !canSendMsgInCommentGroupWithoutJoin()) && (currentChat.join_to_send || !isThreadChat() || ChatObject.isForum(currentChat)) || forumTopic != null && forumTopic.closed && !ChatObject.canManageTopic(currentAccount, currentChat, forumTopic) || shouldDisplaySwipeToLeftToReplyInForum()) ||
->>>>>>> d66233ec46d26f14d7798f0fbd4c08cd35f3ebd9
+
                     currentUser != null && (UserObject.isDeleted(currentUser) || userBlocked || UserObject.isReplyUser(currentUser))) {
                 if (chatActivityEnterView.isEditingMessage()) {
                     chatActivityEnterView.setVisibility(View.VISIBLE);
