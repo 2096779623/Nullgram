@@ -42951,15 +42951,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 if (messageObject.isAnyKindOfSticker() && !messageObject.isAnimatedEmojiStickers() && !messageObject.isAnimatedEmoji() && !messageObject.isDice()) {
                     Object parent = getMediaDataController().getStickerSetById(MediaDataController.getStickerSetId(selectedObject.getDocument()));
                     getSendMessagesHelper().sendSticker(
-<<<<<<< HEAD
-                        selectedObject.getDocument(), null, dialog_id, replyToMsgObject, replyToMsgObject, null, replyingQuote, null, true, 0, false, parent, quickReplyShortcut, getQuickReplyId(), 0);
-=======
                         selectedObject.getDocument(), null, dialog_id, replyToMsgObject, replyToMsgObject, null, replyingQuote, null, true, 0, false, parent, quickReplyShortcut, getQuickReplyId(), 0, getSendMonoForumPeerId());
                     return true;
                 } else {
                     var message = messageObject.messageOwner.message;
                     if (!TextUtils.isEmpty(message)) {
->>>>>>> d66233ec46d26f14d7798f0fbd4c08cd35f3ebd9
                         ArrayList<TLRPC.MessageEntity> entities;
                         if (messageObject.messageOwner.entities != null && !messageObject.messageOwner.entities.isEmpty()) {
                             entities = new ArrayList<>();
