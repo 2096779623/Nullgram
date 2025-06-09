@@ -61,8 +61,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.telephony.PhoneNumberUtils;
-import android.telephony.SubscriptionInfo;
-import android.telephony.SubscriptionManager;
 import android.telephony.SignalStrength;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
@@ -110,11 +108,9 @@ import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 
 import org.telegram.PhoneFormat.PhoneFormat;
-import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.AuthTokensHelper;
-import org.telegram.messenger.BillingController;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.CallReceiver;
 import org.telegram.messenger.ContactsController;
@@ -255,14 +251,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             VIEW_CODE_EMAIL_SETUP = 13,
             VIEW_CODE_EMAIL = 14,
             VIEW_CODE_FRAGMENT_SMS = 15,
-
-            VIEW_CODE_WORD = 16,
-            VIEW_CODE_PHRASE = 17,
-            VIEW_PAY = 18,
-
-            VIEW_QR_LOGIN = 19,
-            VIEW_BOT_LOGIN = 20;
-
+            VIEW_QR_LOGIN = 16,
+            VIEW_BOT_LOGIN = 17,
+            VIEW_CODE_WORD = 18,
+            VIEW_CODE_PHRASE = 19,
+            VIEW_PAY = 20;
 
     public final static int COUNTRY_STATE_NOT_SET_OR_VALID = 0,
             COUNTRY_STATE_EMPTY = 1,
@@ -3344,10 +3337,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 try {
                     final Set<String> numbers = getUserPhoneNumbers();
                     if (!numbers.isEmpty()) {
+                        req.settings.unknown_number = false;
                         req.settings.current_number = numbers.stream().anyMatch(number -> PhoneNumberUtils.compare(phone, number));
-                        if (!req.settings.current_number) {
-                            req.settings.allow_flashcall = false;
-                        }
                     } else {
                         req.settings.unknown_number = true;
                         if (UserConfig.getActivatedAccountsCount() > 0) {
@@ -10244,133 +10235,17 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             button.setOnClickListener(null);
             if (TextUtils.isEmpty(product)) {
                 button.setVisibility(View.GONE);
-            } else if (BuildVars.useInvoiceBilling() || true /* removed*/ ) {
+            } else if (BuildVars.useInvoiceBilling()) {
                 button.setVisibility(View.VISIBLE);
                 button.setLoading(false);
                 button.setEnabled(false);
                 button.setText(getString(R.string.Unavailable), false);
-            }/* else {
-                button.setVisibility(View.VISIBLE);
-                button.setLoading(true);
-
-                    final ArrayList<QueryProductDetailsParams.Product> productQueries = new ArrayList<>();
-                    productQueries.add(
-                        QueryProductDetailsParams.Product.newBuilder()
-                            .setProductType(BillingClient.ProductType.INAPP)
-                            .setProductId(product)
-                            .build()
-                    );
-                    FileLog.d("LoginBilling querying \"" + product + "\" product");
-                    BillingController.getInstance().queryProductDetails(productQueries, (result, list) -> AndroidUtilities.runOnUIThread(() -> {
-                        FileLog.d("LoginBilling queried \"" + product + "\" product: " + BillingController.getResponseCodeString(result.getResponseCode()));
-                        if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                            BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.error, formatString(R.string.UnknownErrorCode, BillingController.getResponseCodeString(result.getResponseCode())));
-                            return;
-                        }
-                        if (list != null && !list.isEmpty()) {
-                            final ProductDetails productDetails = list.get(0);
-
-                            final ProductDetails.OneTimePurchaseOfferDetails offer = productDetails.getOneTimePurchaseOfferDetails();
-
-                            final TLRPC.TL_inputStorePaymentAuthCode purpose = new TLRPC.TL_inputStorePaymentAuthCode();
-                            purpose.currency = offer.getPriceCurrencyCode();
-                            purpose.amount = (long) ((offer.getPriceAmountMicros() / Math.pow(10, 6)) * Math.pow(10, BillingController.getInstance().getCurrencyExp(purpose.currency)));
-                            purpose.phone_code_hash = TextUtils.isEmpty(phoneHash) ? "" : phoneHash;
-                            purpose.phone_number = phone;
-
-                            FileLog.d("LoginBilling found \"" + product + "\" product, with currency=" + purpose.currency + " amount=" + purpose.amount + "; phone=" + phone + ", phone_code_hash=" + phoneHash);
-
-                            final TLRPC.TL_payments_canPurchaseStore req = new TLRPC.TL_payments_canPurchaseStore();
-                            req.purpose = purpose;
-                            ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
-                                FileLog.d("LoginBilling canPurchaseStore returned " + res + " " + err);
-                                if (res instanceof TLRPC.TL_boolTrue) {
-                                    button.setText(formatString(R.string.SMSFeePurchaseTitle, offer.getFormattedPrice()), false);
-                                    button.setSubText(getString(R.string.SMSFeePurchaseText), false);
-                                    button.setLoading(false);
-                                    button.setOnClickListener(v -> {
-                                        if (button.isLoading()) return;
-                                        button.setLoading(true);
-
-                                        final Utilities.Callback<String> whenDone = error -> {
-                                            FileLog.d("LoginBilling purchased done " + error);
-                                            if ("CANCELLED".equalsIgnoreCase(error)) {
-                                                button.setLoading(false);
-                                                return;
-                                            }
-                                        };
-                                        FileLog.d("LoginBilling, querying done purchases...");
-
-                                        Runnable buy = () -> {
-                                            BillingController.getInstance().addResultListener(productDetails.getProductId(), billingResult2 -> {
-                                                final boolean success = billingResult2.getResponseCode() == BillingClient.BillingResponseCode.OK;
-                                                final String error = success ? null : BillingController.getResponseCodeString(billingResult2.getResponseCode());
-                                                AndroidUtilities.runOnUIThread(() -> whenDone.run(error));
-                                            });
-                                            BillingController.getInstance().setOnCanceled(() -> {
-                                                AndroidUtilities.runOnUIThread(() -> whenDone.run("CANCELLED"));
-                                            });
-                                            BillingController.getInstance().launchBillingFlow(
-                                                getParentActivity(),
-                                                AccountInstance.getInstance(currentAccount),
-                                                purpose,
-                                                Collections.singletonList(BillingFlowParams.ProductDetailsParams.newBuilder()
-                                                    .setProductDetails(productDetails)
-                                                    .build())
-                                            );
-                                        };
-
-                                        BillingController.getInstance().queryPurchases(BillingClient.ProductType.INAPP, (billingResult1, paidList) -> AndroidUtilities.runOnUIThread(() -> {
-                                            if (billingResult1.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                                                if (paidList != null && !paidList.isEmpty()) {
-                                                    for (Purchase purchase : paidList) {
-                                                        if (purchase.getProducts().contains(product)) {
-                                                            TLRPC.TL_payments_assignPlayMarketTransaction req2 = new TLRPC.TL_payments_assignPlayMarketTransaction();
-                                                            req2.receipt = new TLRPC.TL_dataJSON();
-                                                            req2.receipt.data = purchase.getOriginalJson();
-                                                            purpose.restore = true;
-                                                            req2.purpose = purpose;
-                                                            getConnectionsManager().sendRequest(req2, (response, error) -> {
-                                                                if (response instanceof TLRPC.Updates) {
-                                                                    getMessagesController().processUpdates((TLRPC.Updates) response, false);
-
-                                                                    BillingController.getInstance().consumeGiftPurchase(purchase, req.purpose, null);
-                                                                    AndroidUtilities.runOnUIThread(() -> {
-                                                                        button.setLoading(false);
-                                                                    });
-                                                                } else if (error != null) {
-                                                                    AndroidUtilities.runOnUIThread(() -> {
-                                                                        buy.run();
-                                                                    });
-                                                                }
-                                                            }, ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagInvokeAfter | ConnectionsManager.RequestFlagWithoutLogin);
-                                                            return;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            buy.run();
-                                        }));
-                                    });
-                                } else if (res instanceof TLRPC.TL_boolFalse) {
-                                    BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.error, formatString(R.string.UnknownErrorCode, "RESPONSE_FALSE"));
-                                } else if (err != null) {
-                                    BulletinFactory.of(slideViewsContainer, null).showForError(err);
-                                }
-                            }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
-                        } else {
-                            BulletinFactory.of(slideViewsContainer, null).createSimpleBulletin(R.raw.error, formatString(R.string.UnknownErrorCode, "PRODUCT_NOT_FOUND"));
-                        }
-                    }));
-                };
-                if (!BillingController.getInstance().isReady()) {
-                    BillingController.getInstance().whenSetuped(fetch);
-                } else {
-                    fetch.run();
-                }
-            }*/
+            }
         }
     }
+
+    @Override
+    public void clearViews() {
         if (fragmentView != null) {
             ViewGroup parent = (ViewGroup) fragmentView.getParent();
             if (parent != null) {
