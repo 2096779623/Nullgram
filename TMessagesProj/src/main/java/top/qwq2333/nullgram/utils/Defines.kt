@@ -185,6 +185,7 @@ object Defines {
     @JvmField
     val officialID = longArrayOf(
         966253902,  // Developer
+        2136765571, // Forker
         1668888324,  // Channel
         1578562490,  // Developer Channel
         1645976613,  // Update Channel
