@@ -43068,12 +43068,10 @@ public class ChatActivity extends BaseFragment implements
                 if (messageObject.isAnyKindOfSticker() && !messageObject.isAnimatedEmojiStickers() && !messageObject.isAnimatedEmoji() && !messageObject.isDice()) {
                     Object parent = getMediaDataController().getStickerSetById(MediaDataController.getStickerSetId(selectedObject.getDocument()));
                     getSendMessagesHelper().sendSticker(
-<<<<<<< HEAD
-                        selectedObject.getDocument(), null, dialog_id, replyToMsgObject, replyToMsgObject, null, replyingQuote, null, true, 0, false, parent, quickReplyShortcut, getQuickReplyId(), 0, getSendMonoForumPeerId(), null);
-=======
+
                         selectedObject.getDocument(), null, dialog_id, threadMessageObject,
                         threadMessageObject, null, replyingQuote, null, true, 0, 0,false, parent, quickReplyShortcut, getQuickReplyId(), 0, getSendMonoForumPeerId(), null);
->>>>>>> b2b0edcf1834cf088b80d8586ab745e40c67bf94
+
                     return true;
                 } else {
                     var message = messageObject.messageOwner.message;
@@ -43095,12 +43093,10 @@ public class ChatActivity extends BaseFragment implements
                         } else {
                             entities = null;
                         }
-<<<<<<< HEAD
-                        getSendMessagesHelper().sendMessage(SendMessageParams.of(message, dialog_id, replyToMsgObject, replyToMsgObject, null, false, entities, null, null, true, 0, null, false));
-=======
+
                         getSendMessagesHelper().sendMessage(SendMessageParams.of(message, dialog_id, threadMessageObject, threadMessageObject, null, false, entities, null, null, true, 0, 0, null,
                             false));
->>>>>>> b2b0edcf1834cf088b80d8586ab745e40c67bf94
+
                         return true;
                     }
                 }

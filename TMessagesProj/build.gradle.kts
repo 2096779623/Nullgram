@@ -26,12 +26,8 @@ configurations {
 }
 
 var serviceAccountCredentialsFile = File(rootProject.projectDir, "service_account_credentials.json")
-<<<<<<< HEAD
-val abiName = mapOf("armeabi-v7a" to "arm32", "arm64-v8a" to "arm64", "x86" to "x86", "x86_64" to "x86_64")
-=======
 val abiName = mapOf("armeabi-v7a" to "arm32", "arm64-v8a" to "arm64")
 val isCi = System.getenv("GITHUB_ACTIONS") == "true"
->>>>>>> b2b0edcf1834cf088b80d8586ab745e40c67bf94
 
 if (serviceAccountCredentialsFile.isFile) {
     setupPlay(Version.isStable)
