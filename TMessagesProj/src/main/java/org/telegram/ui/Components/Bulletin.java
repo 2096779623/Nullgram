@@ -282,6 +282,14 @@ public class Bulletin {
         return this;
     }
 
+    public Bulletin wrapContent() {
+        if (layout.getLayoutParams() instanceof FrameLayout.LayoutParams) {
+            ((FrameLayout.LayoutParams) layout.getLayoutParams()).width = FrameLayout.LayoutParams.WRAP_CONTENT;
+            ((FrameLayout.LayoutParams) layout.getLayoutParams()).gravity |= Gravity.CENTER_HORIZONTAL;
+        }
+        return this;
+    }
+
     public boolean setCanHideOnShow = true;
     public Bulletin show(boolean top) {
         if (!showing && containerLayout != null) {
@@ -361,6 +369,7 @@ public class Bulletin {
                                 }
                             }, currentBottomOffset);
                         } else {
+                            layout.delegate = currentDelegate;
                             if (currentDelegate != null && !top) {
                                 currentDelegate.onBottomOffsetChange(layout.getHeight() - currentBottomOffset);
                             }
@@ -2464,7 +2473,7 @@ public class Bulletin {
                     params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
                 }
                 window.setAttributes(params);
-                AndroidUtilities.setLightNavigationBar(window, AndroidUtilities.computePerceivedBrightness(Theme.getColor(Theme.key_windowBackgroundGray)) > 0.721f);
+                AndroidUtilities.setLightNavigationBar(this, AndroidUtilities.computePerceivedBrightness(Theme.getColor(Theme.key_windowBackgroundGray)) > 0.721f);
             } catch (Exception ignore) {}
         }
 

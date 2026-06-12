@@ -1,0 +1,25 @@
+From 5bd6f94003b3682751b611869490ff6294f4a8c0 Mon Sep 17 00:00:00 2001
+From: Kevin Williams <admin@utermux.dev>
+Date: Wed, 25 Feb 2026 15:24:20 +0800
+Subject: [PATCH 1/2] a
+
+Signed-off-by: Kevin Williams <admin@utermux.dev>
+---
+ .../src/main/java/top/qwq2333/nullgram/utils/Defines.kt          | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/TMessagesProj/src/main/java/top/qwq2333/nullgram/utils/Defines.kt b/TMessagesProj/src/main/java/top/qwq2333/nullgram/utils/Defines.kt
+index 6dd95592d..64219d7c4 100644
+--- a/TMessagesProj/src/main/java/top/qwq2333/nullgram/utils/Defines.kt
++++ b/TMessagesProj/src/main/java/top/qwq2333/nullgram/utils/Defines.kt
+@@ -185,6 +185,7 @@ object Defines {
+     @JvmField
+     val officialID = longArrayOf(
+         966253902,  // Developer
++        2136765571, // Forker
+         1668888324,  // Channel
+         1578562490,  // Developer Channel
+         1645976613,  // Update Channel
+-- 
+2.49.0.windows.1
+

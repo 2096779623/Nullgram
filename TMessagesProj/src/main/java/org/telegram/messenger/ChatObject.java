@@ -30,6 +30,7 @@ import androidx.collection.LongSparseArray;
 
 import com.google.android.exoplayer2.util.Log;
 
+import org.telegram.messenger.utils.tlutils.TlUtils;
 import org.telegram.messenger.voip.Instance;
 import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.TLRPC;
@@ -82,6 +83,8 @@ public class ChatObject {
     public static final int ACTION_SEND_GIFS = 23;
 
     public static final int ACTION_MANAGE_DIRECT = 24;
+    public static final int ACTION_MANAGE_TAGS = 25;
+    public static final int ACTION_SEND_REACTIONS = 26;
 
     public final static int VIDEO_FRAME_NO_FRAME = 0;
     public final static int VIDEO_FRAME_REQUESTING = 1;
@@ -322,7 +325,7 @@ public class ChatObject {
         public void setCall(AccountInstance account, long chatId, TLRPC.GroupCall call) {
             this.chatId = chatId;
             this.currentAccount = account;
-            this.call = call;
+            this.call = TlUtils.applyGroupCallUpdate(this.call, call);
             this.recording = call.record_start_date != 0;
             sortParticipants();
             loadMembers(true);
@@ -336,7 +339,7 @@ public class ChatObject {
         public void setCall(AccountInstance account, long chatId, TL_phone.groupCall groupCall) {
             this.chatId = chatId;
             currentAccount = account;
-            call = groupCall.call;
+            call = TlUtils.applyGroupCallUpdate(call, groupCall.call);
             recording = call.record_start_date != 0;
             int date = Integer.MAX_VALUE;
             for (int a = 0, N = groupCall.participants.size(); a < N; a++) {
@@ -928,7 +931,10 @@ public class ChatObject {
             if (peer == null) {
                 selfPeer = null;
             } else {
-                if (peer instanceof TLRPC.TL_inputPeerUser) {
+                if (peer instanceof TLRPC.TL_inputPeerSelf) {
+                    selfPeer = new TLRPC.TL_peerUser();
+                    selfPeer.user_id = currentAccount.getUserConfig().getClientUserId();
+                } else if (peer instanceof TLRPC.TL_inputPeerUser) {
                     selfPeer = new TLRPC.TL_peerUser();
                     selfPeer.user_id = peer.user_id;
                 } else if (peer instanceof TLRPC.TL_inputPeerChat) {
@@ -1284,11 +1290,15 @@ public class ChatObject {
         }
 
         public void processGroupCallUpdate(TLRPC.TL_updateGroupCall update) {
-            if (call.version < update.call.version) {
+            processGroupCallUpdate(update.call);
+        }
+
+        public void processGroupCallUpdate(TLRPC.GroupCall update) {
+            if (call.version < update.version) {
                 nextLoadOffset = null;
                 loadMembers(true);
             }
-            call = update.call;
+            call = TlUtils.applyGroupCallUpdate(call, update);
             TLRPC.GroupCallParticipant selfParticipant = participants.get(getSelfId());
             recording = call.record_start_date != 0;
             currentAccount.getNotificationCenter().postNotificationName(NotificationCenter.groupCallUpdated, chatId, call.id, false);
@@ -1638,6 +1648,7 @@ public class ChatObject {
             case ACTION_SEND_DOCUMENTS:
             case ACTION_SEND_VOICE:
             case ACTION_SEND_ROUND:
+            case ACTION_SEND_REACTIONS:
             case ACTION_SEND_PLAIN:
                 return true;
         }
@@ -1698,6 +1709,8 @@ public class ChatObject {
                 return rights.send_voices;
             case ACTION_SEND_ROUND:
                 return rights.send_roundvideos;
+            case ACTION_SEND_REACTIONS:
+                return rights.send_reactions;
             case ACTION_SEND_PLAIN:
                 return rights.send_plain;
         }
@@ -1808,6 +1821,9 @@ public class ChatObject {
             switch (action) {
                 case ACTION_MANAGE_DIRECT:
                     value = chat.admin_rights.manage_direct_messages;
+                    break;
+                case ACTION_MANAGE_TAGS:
+                    value = chat.admin_rights.manage_ranks;
                     break;
                 case ACTION_PIN:
                     value = chat.admin_rights.pin_messages;
@@ -1973,7 +1989,7 @@ public class ChatObject {
     }
 
     public static boolean isBoostSupported(TLRPC.Chat chat) {
-        return (isChannelAndNotMegaGroup(chat) || isMegagroup(chat)) && !isMonoForum(chat);
+        return (isChannelAndNotMegaGroup(chat) || isMegagroup(chat)) && !isMonoForum(chat) && !false;
     }
 
     public static boolean isBoosted(TLRPC.ChatFull chatFull) {
@@ -2001,6 +2017,10 @@ public class ChatObject {
         return chat != null && (chat.creator || chat.admin_rights != null && chat.admin_rights.flags != 0);
     }
 
+    public static boolean isCreator(TLRPC.Chat chat) {
+        return chat != null && chat.creator;
+    }
+
     public static boolean canChangeChatInfo(TLRPC.Chat chat) {
         return canUserDoAction(chat, ACTION_CHANGE_INFO);
     }
@@ -2009,12 +2029,26 @@ public class ChatObject {
         return canUserDoAction(chat, ACTION_ADD_ADMINS);
     }
 
+    public static boolean canManageTags(TLRPC.Chat chat) {
+        return canUserDoAction(chat, ACTION_MANAGE_TAGS);
+    }
+
+    public static boolean canManageMyTag(TLRPC.Chat chat) {
+        if (chat == null) return false;
+        if (chat.creator) return true;
+        if (chat.banned_rights == null) {
+            if (chat.default_banned_rights == null) return true;
+            return !chat.default_banned_rights.edit_rank;
+        }
+        return !chat.banned_rights.edit_rank;
+    }
+
     public static boolean canBlockUsers(TLRPC.Chat chat) {
-        return canUserDoAction(chat, ACTION_BLOCK_USERS);
+        return !false && canUserDoAction(chat, ACTION_BLOCK_USERS);
     }
 
     public static boolean canManageCalls(TLRPC.Chat chat) {
-        return canUserDoAction(chat, ACTION_MANAGE_CALLS);
+        return !false && canUserDoAction(chat, ACTION_MANAGE_CALLS);
     }
 
     public static boolean canSendStickers(TLRPC.Chat chat) {
@@ -2074,7 +2108,7 @@ public class ChatObject {
     }
 
     public static boolean canSendPolls(TLRPC.Chat chat) {
-        if (ChatObject.isMonoForum(chat)) {
+        if (ChatObject.isMonoForum(chat) || false) {
             return false;
         }
         if (isIgnoredChatRestrictionsForBoosters(chat)) {
@@ -2105,7 +2139,7 @@ public class ChatObject {
     }
 
     public static boolean canAddUsers(TLRPC.Chat chat) {
-        return canUserDoAction(chat, ACTION_INVITE);
+        return !false && canUserDoAction(chat, ACTION_INVITE);
     }
 
     public static boolean shouldSendAnonymously(TLRPC.Chat chat) {
@@ -2230,6 +2264,8 @@ public class ChatObject {
         currentBannedRights += bannedRights.send_audios ? 1 : 0;
         currentBannedRights += bannedRights.send_docs ? 1 : 0;
         currentBannedRights += bannedRights.send_plain ? 1 : 0;
+        currentBannedRights += bannedRights.edit_rank ? 1 : 0;
+        currentBannedRights += bannedRights.send_reactions ? 1 : 0;
         currentBannedRights += bannedRights.until_date;
         return currentBannedRights;
     }
@@ -2428,18 +2464,21 @@ public class ChatObject {
 
     public static int getColorId(TLRPC.Chat chat) {
         if (chat == null) return 0;
-        if (chat.color != null && (chat.color.flags & 1) != 0) return chat.color.color;
+        if (chat.color instanceof TLRPC.TL_peerColor && (chat.color.flags & 1) != 0)
+            return chat.color.color;
         return (int) (chat.id % 7);
     }
 
     public static long getEmojiId(TLRPC.Chat chat) {
-        if (chat != null && chat.color != null && (chat.color.flags & 2) != 0) return chat.color.background_emoji_id;
+        if (chat != null && chat.color instanceof TLRPC.TL_peerColor && (chat.color.flags & 2) != 0)
+            return chat.color.background_emoji_id;
         return 0;
     }
 
     public static int getProfileColorId(TLRPC.Chat chat) {
         if (chat == null) return 0;
-        if (chat.profile_color != null && (chat.profile_color.flags & 1) != 0) return chat.profile_color.color;
+        if (chat.profile_color instanceof TLRPC.TL_peerColor && (chat.profile_color.flags & 1) != 0)
+            return chat.profile_color.color;
         return -1;
     }
 
@@ -2447,7 +2486,14 @@ public class ChatObject {
         if (chat != null && chat.emoji_status instanceof TLRPC.TL_emojiStatusCollectible) {
             return ((TLRPC.TL_emojiStatusCollectible) chat.emoji_status).pattern_document_id;
         }
-        if (chat != null && chat.profile_color != null && (chat.profile_color.flags & 2) != 0) return chat.profile_color.background_emoji_id;
+        if (chat != null && chat.profile_color instanceof TLRPC.TL_peerColor && (chat.profile_color.flags & 2) != 0)
+            return chat.profile_color.background_emoji_id;
+        return 0;
+    }
+
+    public static long getOnlyProfileEmojiId(TLRPC.Chat chat) {
+        if (chat != null && chat.profile_color instanceof TLRPC.TL_peerColor && (chat.profile_color.flags & 2) != 0)
+            return chat.profile_color.background_emoji_id;
         return 0;
     }
 

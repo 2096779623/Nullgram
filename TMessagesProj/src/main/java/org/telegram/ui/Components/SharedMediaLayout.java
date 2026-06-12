@@ -777,6 +777,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         private ArrayList<SharedMediaPreloaderDelegate> delegates = new ArrayList<>();
         private boolean mediaWasLoaded;
 
+        public long getTopicId() {
+            return topicId;
+        }
+
         public boolean hasSharedMedia() {
             int[] hasMedia = getLastMediaCount();
             if (hasMedia == null) return false;
@@ -1537,19 +1541,19 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             this.initialTab = TAB_BOT_PREVIEWS;
         } else if (userInfo != null && userInfo.bot_info != null && userInfo.bot_info.has_preview_medias) {
             this.initialTab = TAB_STORIES;
-        } else if (main_tab == TLRPC.ProfileTab.profileTabPosts && (userInfo != null && userInfo.stories_pinned_available || chatInfo != null && chatInfo.stories_pinned_available || isStoriesView())) {
+        } else if (main_tab instanceof TLRPC.TL_profileTabPosts && (userInfo != null && userInfo.stories_pinned_available || chatInfo != null && chatInfo.stories_pinned_available || isStoriesView())) {
             this.initialTab = TAB_STORIES;
-        } else if (main_tab == TLRPC.ProfileTab.profileTabGifts && (userInfo != null && userInfo.stargifts_count > 0 || chatInfo != null && chatInfo.stargifts_count > 0)) {
+        } else if (main_tab instanceof TLRPC.TL_profileTabGifts && (userInfo != null && userInfo.stargifts_count > 0 || chatInfo != null && chatInfo.stargifts_count > 0)) {
             this.initialTab = TAB_GIFTS;
-        } else if (main_tab == TLRPC.ProfileTab.profileTabFiles && (hasMedia[1] == -1 || hasMedia[1] > 0)) {
+        } else if (main_tab instanceof TLRPC.TL_profileTabFiles && (hasMedia[1] == -1 || hasMedia[1] > 0)) {
             this.initialTab = TAB_FILES;
-        } else if (main_tab == TLRPC.ProfileTab.profileTabGifs && (hasMedia[5] == -1 || hasMedia[5] > 0)) {
+        } else if (main_tab instanceof TLRPC.TL_profileTabGifs && (hasMedia[5] == -1 || hasMedia[5] > 0)) {
             this.initialTab = TAB_GIF;
-        } else if (main_tab == TLRPC.ProfileTab.profileTabLinks && (hasMedia[3] == -1 || hasMedia[3] > 0)) {
+        } else if (main_tab instanceof TLRPC.TL_profileTabLinks && (hasMedia[3] == -1 || hasMedia[3] > 0)) {
             this.initialTab = TAB_LINKS;
-        } else if (main_tab == TLRPC.ProfileTab.profileTabMusic && (hasMedia[4] == -1 || hasMedia[4] > 0)) {
+        } else if (main_tab instanceof TLRPC.TL_profileTabMusic && (hasMedia[4] == -1 || hasMedia[4] > 0)) {
             this.initialTab = TAB_AUDIO;
-        } else if (main_tab == TLRPC.ProfileTab.profileTabVoice && (hasMedia[2] == -1 || hasMedia[2] > 0)) {
+        } else if (main_tab instanceof TLRPC.TL_profileTabVoice && (hasMedia[2] == -1 || hasMedia[2] > 0)) {
             this.initialTab = TAB_VOICE;
         } else if (userInfo != null && userInfo.stories_pinned_available || chatInfo != null && chatInfo.stories_pinned_available || isStoriesView()) {
             this.initialTab = getInitialTab();
@@ -1601,6 +1605,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.savedMessagesDialogsUpdate);
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.dialogsNeedReload);
         profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.starUserGiftsLoaded);
+        profileActivity.getNotificationCenter().addObserver(this, NotificationCenter.updatedChatRanks);
 
         for (int a = 0; a < 10; a++) {
             //cellCache.add(new SharedPhotoVideoCell(context));
@@ -4745,6 +4750,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.savedMessagesDialogsUpdate);
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.dialogsNeedReload);
         profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.starUserGiftsLoaded);
+        profileActivity.getNotificationCenter().removeObserver(this, NotificationCenter.updatedChatRanks);
         if (searchTagsList != null) {
             searchTagsList.detach();
         }
@@ -5085,7 +5091,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     for (int a = 0; a < dids.size(); a++) {
                         long did = dids.get(a).dialogId;
                         if (message != null) {
-                            profileActivity.getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of(message.toString(), did, null, null, null, true, null, null, null, forwardParams.notify, forwardParams.scheduleDate, null, false));
+                            profileActivity.getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of(message.toString(), did, null, null, null, true, null, null, null, forwardParams.notify, forwardParams.scheduleDate, 0, null, false));
                         }
                         profileActivity.getSendMessagesHelper().sendMessage(fmessages, did, forwardParams.noQuote, forwardParams.noCaption, forwardParams.notify, forwardParams.scheduleDate, 0);
                     }
@@ -6194,6 +6200,19 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             long dialogId = (long) args[0];
             if (dialogId == dialog_id) {
                 updateTabs(true);
+            }
+        } else if (id == NotificationCenter.updatedChatRanks) {
+            final long chatId = (long) args[0];
+            final long userId = (long) args[1];
+            if (dialog_id != -chatId) return;
+            final String rank = (String) args[2];
+            if (chatUsersAdapter != null) {
+                chatUsersAdapter.updateRank(userId, rank);
+                for (int i = 0; i < mediaPages.length; ++i) {
+                    if (mediaPages[i].selectedType == TAB_GROUPUSERS) {
+                        AndroidUtilities.updateVisibleRows(mediaPages[i].listView);
+                    }
+                }
             }
         }
     }
@@ -10118,6 +10137,15 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             return chatInfo != null ? chatInfo.participants.participants.size() : 0;
         }
 
+        public void updateRank(long userId, String rank) {
+            if (chatInfo == null) return;
+            if (chatInfo.participants == null) return;
+            for (int i = 0; i < chatInfo.participants.participants.size(); ++i) {
+                final TLRPC.ChatParticipant p = chatInfo.participants.participants.get(i);
+                p.setRank(userId, rank);
+            }
+        }
+
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             if (viewType == VIEW_TYPE_GROUPUSER_EMPTY) {
@@ -10144,30 +10172,50 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
             }
             if (part != null) {
                 String role;
+                final boolean isAdmin, isOwner, canEditAdmin;
                 if (part instanceof TLRPC.TL_chatChannelParticipant) {
-                    TLRPC.ChannelParticipant channelParticipant = ((TLRPC.TL_chatChannelParticipant) part).channelParticipant;
-                    if (!TextUtils.isEmpty(channelParticipant.rank)) {
-                        role = channelParticipant.rank;
+                    final TLRPC.ChannelParticipant channelParticipant = ((TLRPC.TL_chatChannelParticipant) part).channelParticipant;
+                    role = channelParticipant.rank;
+                    if (channelParticipant instanceof TLRPC.TL_channelParticipantCreator) {
+                        if (TextUtils.isEmpty(role)) role = getString("ChannelCreator", R.string.ChannelCreator);
+                        isAdmin = true;
+                        isOwner = true;
+                        canEditAdmin = false;
+                    } else if (channelParticipant instanceof TLRPC.TL_channelParticipantAdmin) {
+                        if (TextUtils.isEmpty(role)) role = getString("ChannelAdmin", R.string.ChannelAdmin);
+                        isAdmin = true;
+                        isOwner = false;
+                        canEditAdmin = channelParticipant.promoted_by == profileActivity.getUserConfig().getClientUserId();
                     } else {
-                        if (channelParticipant instanceof TLRPC.TL_channelParticipantCreator) {
-                            role = getString("ChannelCreator", R.string.ChannelCreator);
-                        } else if (channelParticipant instanceof TLRPC.TL_channelParticipantAdmin) {
-                            role = getString("ChannelAdmin", R.string.ChannelAdmin);
-                        } else {
-                            role = null;
-                        }
+                        isAdmin = false;
+                        isOwner = false;
+                        canEditAdmin = false;
                     }
                 } else {
+                    role = part.rank;
                     if (part instanceof TLRPC.TL_chatParticipantCreator) {
-                        role = getString("ChannelCreator", R.string.ChannelCreator);
+                        if (TextUtils.isEmpty(role)) role = getString("ChannelCreator", R.string.ChannelCreator);
+                        isAdmin = true;
+                        isOwner = true;
+                        canEditAdmin = false;
                     } else if (part instanceof TLRPC.TL_chatParticipantAdmin) {
-                        role = getString("ChannelAdmin", R.string.ChannelAdmin);
+                        if (TextUtils.isEmpty(role)) role = getString("ChannelAdmin", R.string.ChannelAdmin);
+                        isAdmin = true;
+                        isOwner = false;
+                        canEditAdmin = part.inviter_id == profileActivity.getUserConfig().getClientUserId();
                     } else {
-                        role = null;
+                        isAdmin = false;
+                        isOwner = false;
+                        canEditAdmin = false;
                     }
                 }
-                userCell.setAdminRole(role);
-                userCell.setData(profileActivity.getMessagesController().getUser(part.user_id), null, null, 0, position != chatInfo.participants.participants.size() - 1);
+                final String finalRole = role;
+                final TLRPC.User user = profileActivity.getMessagesController().getUser(part.user_id);
+                final boolean showAddTag = UserObject.isUserSelf(user) && ChatObject.canManageMyTag(profileActivity.getMessagesController().getChat(-dialog_id));
+                userCell.setAdminRole(role, isAdmin, isOwner, showAddTag, v -> {
+                    TagEditCell.showInfoSheet(getContext(), profileActivity.getCurrentAccount(), dialog_id, user, finalRole, isAdmin, isOwner, canEditAdmin, resourcesProvider);
+                });
+                userCell.setData(user, null, null, 0, position != chatInfo.participants.participants.size() - 1);
             }
         }
 
@@ -11633,14 +11681,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         if (id != TAB_STORIES && id != TAB_GIFTS && !isChannel)
             return null;
         switch (id) {
-            case TAB_STORIES:    return TLRPC.ProfileTab.profileTabPosts;
-            case TAB_PHOTOVIDEO: return TLRPC.ProfileTab.profileTabMedia;
-            case TAB_GIFTS:      return TLRPC.ProfileTab.profileTabGifts;
-            case TAB_AUDIO:      return TLRPC.ProfileTab.profileTabMusic;
-            case TAB_VOICE:      return TLRPC.ProfileTab.profileTabVoice;
-            case TAB_LINKS:      return TLRPC.ProfileTab.profileTabLinks;
-            case TAB_FILES:      return TLRPC.ProfileTab.profileTabFiles;
-            case TAB_GIF:        return TLRPC.ProfileTab.profileTabGifs;
+            case TAB_STORIES:    return new TLRPC.TL_profileTabPosts();
+            case TAB_PHOTOVIDEO: return new TLRPC.TL_profileTabMedia();
+            case TAB_GIFTS:      return new TLRPC.TL_profileTabGifts();
+            case TAB_AUDIO:      return new TLRPC.TL_profileTabMusic();
+            case TAB_VOICE:      return new TLRPC.TL_profileTabVoice();
+            case TAB_LINKS:      return new TLRPC.TL_profileTabLinks();
+            case TAB_FILES:      return new TLRPC.TL_profileTabFiles();
+            case TAB_GIF:        return new TLRPC.TL_profileTabGifs();
         }
         return null;
     }
@@ -11660,14 +11708,14 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     }
 
     public static int getTabId(TLRPC.ProfileTab tab) {
-        if (tab == TLRPC.ProfileTab.profileTabPosts) return TAB_STORIES;
-        if (tab == TLRPC.ProfileTab.profileTabMedia) return TAB_PHOTOVIDEO;
-        if (tab == TLRPC.ProfileTab.profileTabGifts) return TAB_GIFTS;
-        if (tab == TLRPC.ProfileTab.profileTabMusic) return TAB_AUDIO;
-        if (tab == TLRPC.ProfileTab.profileTabVoice) return TAB_VOICE;
-        if (tab == TLRPC.ProfileTab.profileTabLinks) return TAB_LINKS;
-        if (tab == TLRPC.ProfileTab.profileTabFiles) return TAB_FILES;
-        if (tab == TLRPC.ProfileTab.profileTabGifs)  return TAB_GIF;
+        if (tab instanceof TLRPC.TL_profileTabPosts) return TAB_STORIES;
+        if (tab instanceof TLRPC.TL_profileTabMedia) return TAB_PHOTOVIDEO;
+        if (tab instanceof TLRPC.TL_profileTabGifts) return TAB_GIFTS;
+        if (tab instanceof TLRPC.TL_profileTabMusic) return TAB_AUDIO;
+        if (tab instanceof TLRPC.TL_profileTabVoice) return TAB_VOICE;
+        if (tab instanceof TLRPC.TL_profileTabLinks) return TAB_LINKS;
+        if (tab instanceof TLRPC.TL_profileTabFiles) return TAB_FILES;
+        if (tab instanceof TLRPC.TL_profileTabGifs)  return TAB_GIF;
         return -1;
     }
 

@@ -9,7 +9,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.google.services)
     alias(libs.plugins.triplet.play)
@@ -27,7 +26,12 @@ configurations {
 }
 
 var serviceAccountCredentialsFile = File(rootProject.projectDir, "service_account_credentials.json")
+<<<<<<< HEAD
 val abiName = mapOf("armeabi-v7a" to "arm32", "arm64-v8a" to "arm64", "x86" to "x86", "x86_64" to "x86_64")
+=======
+val abiName = mapOf("armeabi-v7a" to "arm32", "arm64-v8a" to "arm64")
+val isCi = System.getenv("GITHUB_ACTIONS") == "true"
+>>>>>>> b2b0edcf1834cf088b80d8586ab745e40c67bf94
 
 if (serviceAccountCredentialsFile.isFile) {
     setupPlay(Version.isStable)
@@ -57,14 +61,16 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics.ndk)
 
-    implementation(libs.core.ktx)
-    implementation(libs.palette.ktx)
-    implementation(libs.exifinterface)
-    implementation(libs.dynamicanimation)
-    implementation(libs.interpolator)
-    implementation(libs.fragment)
-    implementation(libs.sharetarget)
-    implementation(libs.biometric)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.palette.ktx)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.dynamicanimation)
+    implementation(libs.androidx.interpolator)
+    implementation(libs.androidx.fragment)
+    implementation(libs.androidx.sharetarget)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.mediarouter)
+    implementation(libs.androidx.credentials)
 
     compileOnly(libs.checker.compat.qual)
     compileOnly(libs.checker.qual)
@@ -85,7 +91,6 @@ dependencies {
     implementation(libs.process.phoenix)
     implementation(libs.hiddenapibypass)
     implementation(libs.nanohttpd)
-    implementation(libs.mediarouter)
     implementation(libs.recaptcha)
 
     implementation(libs.kotlin.stdlib.common)
@@ -110,8 +115,8 @@ android {
     namespace = "org.telegram.messenger"
 
     sourceSets.getByName("main") {
-        java.srcDir("src/main/java")
-        jniLibs.srcDirs("./jni/")
+        java.directories.add("src/main/java")
+        jniLibs.directories.add("./jni/")
     }
 
     externalNativeBuild {
@@ -165,7 +170,10 @@ android {
             isShrinkResources = true
             proguardFiles(File(projectDir, "proguard-rules.pro"))
 
-            the<CrashlyticsExtension>().nativeSymbolUploadEnabled = true
+            the<CrashlyticsExtension>().nativeSymbolUploadEnabled = isCi
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = isCi
+            }
         }
 
         getByName("debug") {
@@ -187,6 +195,9 @@ android {
         buildConfig = true
     }
 
+    //noinspection WrongGradleMethod
+    val isBuildingBundle = gradle.startParameter.taskNames.any { it.lowercase().contains("bundle") }
+
     defaultConfig {
         externalNativeBuild {
             cmake {
@@ -200,36 +211,48 @@ android {
                 )
             }
         }
+        ndk {
+            if (isBuildingBundle) {
+                abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+            }
+        }
         buildConfigField("String", "BUILD_TIME", "\"${SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date())}\"")
     }
 
     splits {
         abi {
-            isEnable = true
+            isEnable = !isBuildingBundle
             reset()
             include("arm64-v8a", "x86_64")
         }
     }
+}
 
-    androidComponents {
-        onVariants { variant ->
-            variant.buildConfigFields!!.put("isPlay", BuildConfigField("boolean", variant.name.lowercase() == "play", null))
+base {
+    archivesName.set("Nullgram")
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.buildConfigFields!!.put("isPlay", BuildConfigField("boolean", variant.name.lowercase() == "play", null))
+
+        variant.outputs.forEach { output ->
+            val abi = output.filters.find { it.filterType == FilterConfiguration.FilterType.ABI }?.identifier
+            val mappedAbi = when (abi) {
+                "arm64-v8a" -> "arm64"
+                "armeabi-v7a" -> "arm32"
+                else -> abi ?: "universal"
+            }
+            val vName = android.defaultConfig.versionName
+            val oName = "Nullgram-$vName-$mappedAbi.apk"
+            
+            (output as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName?.set(oName)
         }
     }
-
-    applicationVariants.all {
-        outputs.all {
-            val abi = this.filters.find { it.filterType == FilterConfiguration.FilterType.ABI.name }?.identifier
-            val output = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            val outputFileName = "Nullgram-${defaultConfig.versionName}-${abiName[abi]}.apk"
-            output?.outputFileName = outputFileName
-        }
-    }
-
-
 }
 
 kotlin {
+    jvmToolchain(Version.java.toString().toInt())
     sourceSets.configureEach {
         kotlin.srcDir("${layout.buildDirectory.asFile.get().absolutePath}/generated/ksp/$name/kotlin/")
     }
