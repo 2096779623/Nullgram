@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.mediarouter)
     implementation(libs.androidx.credentials)
+    implementation(libs.androidx.security.crypto)
 
     compileOnly(libs.checker.compat.qual)
     compileOnly(libs.checker.qual)
@@ -88,6 +89,12 @@ dependencies {
     implementation(libs.hiddenapibypass)
     implementation(libs.nanohttpd)
     implementation(libs.recaptcha)
+    implementation("io.noties.markwon:core:4.6.2")
+    implementation("io.noties.markwon:ext-strikethrough:4.6.2")
+    implementation("io.noties.markwon:ext-tables:4.6.2")
+    implementation("io.noties.markwon:html:4.6.2")
+    implementation("io.noties.markwon:inline-parser:4.6.2")
+    implementation("io.noties.markwon:ext-latex:4.6.2")
 
     implementation(libs.kotlin.stdlib.common)
     implementation(libs.kotlin.stdlib)
@@ -249,9 +256,6 @@ androidComponents {
 
 kotlin {
     jvmToolchain(Version.java.toString().toInt())
-    sourceSets.configureEach {
-        kotlin.srcDir("${layout.buildDirectory.asFile.get().absolutePath}/generated/ksp/$name/kotlin/")
-    }
 }
 
 private fun getLocalProperty(dir: File, propertyName: String): String? {

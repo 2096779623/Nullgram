@@ -131,6 +131,7 @@ import org.telegram.messenger.camera.CameraView;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_update;
 import org.telegram.tgnet.tl.TL_stories;
 import org.telegram.ui.AccountFrozenAlert;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -3373,7 +3374,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                             }
 
                             int storyId = -1;
-                            for (TLRPC.TL_updateStoryID u : findUpdates((TLRPC.Updates) res2, TLRPC.TL_updateStoryID.class)) {
+                            for (TL_update.TL_updateStoryID u : findUpdates((TLRPC.Updates) res2, TL_update.TL_updateStoryID.class)) {
                                 if (u.random_id == req2.random_id) {
                                     storyId = u.id;
                                     break;
@@ -4778,7 +4779,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 animateGalleryListView(false);
                 if (entry instanceof MediaController.PhotoEntry) {
                     MediaController.PhotoEntry photoEntry = (MediaController.PhotoEntry) entry;
-                    mode = photoEntry.isVideo ? MODE_VIDEO : MODE_PHOTO;
+                    mode = photoEntry.isVideo && !photoEntry.isLivePhoto() ? MODE_VIDEO : MODE_PHOTO;
                     storyEntry = StoryEntry.fromPhotoEntry(photoEntry);
                     storyEntry.blurredVideoThumb = blurredBitmap;
                     storyEntry.botId = botId;

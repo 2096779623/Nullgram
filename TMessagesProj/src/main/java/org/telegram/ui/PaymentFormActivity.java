@@ -77,13 +77,16 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.dynamicanimation.animation.FloatValueHolder;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
+import androidx.fragment.app.FragmentActivity;
 
+import com.google.android.gms.common.api.CommonStatusCodes;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.wallet.AutoResolveHelper;
@@ -93,6 +96,7 @@ import com.google.android.gms.wallet.PaymentDataRequest;
 import com.google.android.gms.wallet.PaymentsClient;
 import com.google.android.gms.wallet.Wallet;
 import com.google.android.gms.wallet.WalletConstants;
+import com.google.android.gms.wallet.contract.TaskResultContracts;
 import com.stripe.android.Stripe;
 import com.stripe.android.TokenCallback;
 import com.stripe.android.exception.APIConnectionException;
@@ -127,6 +131,7 @@ import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.RequestDelegate;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_update;
 import org.telegram.tgnet.tl.TL_account;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
@@ -230,6 +235,7 @@ public class PaymentFormActivity extends BaseFragment implements NotificationCen
     private final HashMap<String, String> phoneFormatMap = new HashMap<>();
 
     private PaymentsClient paymentsClient;
+    private ActivityResultLauncher<Task<PaymentData>> googlePayLauncher;
 
     private EditTextBoldCursor[] inputFields;
     private RadioCell[] radioCells;
@@ -3008,7 +3014,12 @@ public class PaymentFormActivity extends BaseFragment implements NotificationCen
 
                 PaymentDataRequest request = PaymentDataRequest.fromJson(paymentDataRequest.toString());
                 if (request != null) {
-                    AutoResolveHelper.resolveTask(paymentsClient.loadPaymentData(request), getParentActivity(), LOAD_PAYMENT_DATA_REQUEST_CODE);
+                    paymentsClient.loadPaymentData(request).addOnCompleteListener(task -> {
+                        ActivityResultLauncher<Task<PaymentData>> launcher = googlePayLauncher;
+                        if (launcher != null) {
+                            launcher.launch(task);
+                        }
+                    });
                 }
             } catch (JSONException e) {
                 FileLog.e(e);
@@ -3195,8 +3206,27 @@ public class PaymentFormActivity extends BaseFragment implements NotificationCen
     }
 
     private void initGooglePay(Context context) {
-        if (Build.VERSION.SDK_INT < 19 || getParentActivity() == null) {
+        if (Build.VERSION.SDK_INT < 19 || !(getParentActivity() instanceof FragmentActivity)) {
             return;
+        }
+        if (googlePayLauncher == null) {
+            FragmentActivity activity = (FragmentActivity) getParentActivity();
+            googlePayLauncher = activity.getActivityResultRegistry().register(
+                    "google_pay_" + classGuid,
+                    new TaskResultContracts.GetPaymentDataResult(),
+                    result -> {
+                        Status status = result.getStatus();
+                        PaymentData paymentData = result.getResult();
+                        Intent data = new Intent();
+                        if (paymentData != null) {
+                            paymentData.putIntoIntent(data);
+                        }
+                        AutoResolveHelper.putStatusIntoIntent(data, status);
+                        int resultCode = status.isSuccess() ? Activity.RESULT_OK
+                                : status.getStatusCode() == CommonStatusCodes.CANCELED ? Activity.RESULT_CANCELED
+                                : AutoResolveHelper.RESULT_ERROR;
+                        onActivityResultFragment(LOAD_PAYMENT_DATA_REQUEST_CODE, resultCode, data);
+                    });
         }
         Wallet.WalletOptions walletOptions = new Wallet.WalletOptions.Builder()
             .setEnvironment(paymentForm.invoice.test ? WalletConstants.ENVIRONMENT_TEST : WalletConstants.ENVIRONMENT_PRODUCTION)
@@ -3276,6 +3306,10 @@ public class PaymentFormActivity extends BaseFragment implements NotificationCen
 
     @Override
     public void onFragmentDestroy() {
+        if (googlePayLauncher != null) {
+            googlePayLauncher.unregister();
+            googlePayLauncher = null;
+        }
         if (delegate != null) {
             delegate.onFragmentDestroyed();
         }
@@ -4253,11 +4287,11 @@ public class PaymentFormActivity extends BaseFragment implements NotificationCen
                     final TLRPC.Message[] message = new TLRPC.Message[1];
                     for (int a = 0, N = updates.updates.size(); a < N; a++) {
                         final TLRPC.Update update = updates.updates.get(a);
-                        if (update instanceof TLRPC.TL_updateNewMessage) {
-                            message[0] = ((TLRPC.TL_updateNewMessage) update).message;
+                        if (update instanceof TL_update.TL_updateNewMessage) {
+                            message[0] = ((TL_update.TL_updateNewMessage) update).message;
                             break;
-                        } else if (update instanceof TLRPC.TL_updateNewChannelMessage) {
-                            message[0] = ((TLRPC.TL_updateNewChannelMessage) update).message;
+                        } else if (update instanceof TL_update.TL_updateNewChannelMessage) {
+                            message[0] = ((TL_update.TL_updateNewChannelMessage) update).message;
                             break;
                         }
                     }
